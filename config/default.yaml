@@ -1,0 +1,69 @@
+train:
+  autoencoder_learning_rate: 0.001
+
+model:
+  embed_dims: 512
+
+feats:
+  n_fft: 512
+  num_mels: 80
+
+audio:
+  sample_rate: 16000
+  n_fft: 512
+  feat_dim: 80
+  time_length: 90
+  hop_length: 160
+  win_length: 400
+  min_level_db: -100.0
+  ref_level_db: 20.0
+  preemphasis: 0.97
+  power: 0.30
+
+
+
+    # Input type:
+    # 1. raw [-1, 1]
+    # 2. mulaw [-1, 1]
+    # 3. mulaw-quantize [0, mu]
+    # If input_type is raw or mulaw, network assumes scalar input and
+    # discretized mixture of logistic distributions output, otherwise one-hot
+    # input and softmax output are assumed.
+    # **NOTE**: if you change the one of the two parameters below, you need to
+    # re-run preprocessing before training.
+    input_type="raw",
+    quantize_channels=65536,  # 65536 or 256
+
+    # Audio:
+    # time-domain pre/post-processing
+    # e.g., preemphasis/inv_preemphasis
+    # ref: LPCNet https://arxiv.org/abs/1810.11846
+    preprocess="",
+    postprocess="",
+    # waveform domain scaling
+    global_gain_scale=1.0,
+
+    sample_rate=22050,
+    # this is only valid for mulaw is True
+    silence_threshold=2,
+    num_mels=80,
+    fmin=125,
+    fmax=7600,
+    fft_size=1024,
+    # shift can be specified by either hop_size or frame_shift_ms
+    hop_size=256,
+    frame_shift_ms=None,
+    win_length=1024,
+    win_length_ms=-1.0,
+    window="hann",
+
+    # DC removal
+    highpass_cutoff=70.0,
+
+    # Parametric output distribution type for scalar input
+    # 1) Logistic or 2) Normal
+    output_distribution="Logistic",
+    log_scale_min=-16.0,
+
+
+
