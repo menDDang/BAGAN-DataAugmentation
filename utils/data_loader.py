@@ -1,7 +1,5 @@
 import os
 import numpy as np
-import itertools
-import tensorflow as tf
 
 commands = {"backward":0, "down":1, "go":2, "off":3, "on":4, "right":5, "stop":6, "up":7, "yes":8, "no":9}
 labels = ['backward', 'dog', 'follow', 'happy', 'marvin', 'on', 'sheila', 'tree', 'wow', 'bed', \
@@ -62,7 +60,7 @@ class Dataset:
                 _x = data[idx]
                 _y = np.zeros(shape=[11], dtype=np.float32)
                 if key == 'unknown':
-                    _y[10] = 1
+                    _y[-1] = 1
                 else:
                     _y[commands[key]] = 1
 

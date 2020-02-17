@@ -1,6 +1,6 @@
-from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, Flatten, Dense, Reshape, UpSampling2D
-from tensorflow.keras.models import Sequential, Model
-
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Reshape, UpSampling2D, BatchNormalization
+from tensorflow.keras.models import Sequential
+import tensorflow as tf
 
 def create_encoder():
     encoder = Sequential([
@@ -30,3 +30,18 @@ def create_decoder():
         Conv2D(1, (3, 3), activation='sigmoid', padding='same')])
 
     return decoder
+
+
+class Resnet(tf.keras.Model):
+    def __init__(self, filters):
+        super(Resnet, self).__init__()
+        self.net = tf.keras.Sequential([
+            Conv2D(filters, (3, 3), activation='relu', padding='same'),
+            BatchNormalization(),
+            Conv2D(filters, (3, 3), activation='relu', padding='same'),
+            BatchNormalization(),
+        ])
+
+    def call(self, x):
+        return self.net(x) + x
+

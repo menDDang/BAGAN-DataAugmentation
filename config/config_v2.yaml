@@ -8,15 +8,15 @@ train:
   # for LSTM classifier
   lstm_train_epoch_num: 10000
   lstm_learning_rate: 0.001
-  lstm_batch_size: 50
+  lstm_batch_size: 10  # number of data participating in actual training : batch_size * 11
   lstm_valid_interval: 1000
-
+  lstm_chkpt_interval: 5000
 
 model:
   embed_dims: 512
 
   # for LSTM classifier
-  lstm_neuron_num: 128
+  lstm_neuron_num: 256
 
 
 audio:
