@@ -5,17 +5,17 @@ path:
 train:
   autoencoder_learning_rate: 0.001
 
-  # for LSTM classifier
+  # for LSTM classifier.py
   lstm_train_epoch_num: 10000
   lstm_learning_rate: 0.001
-  lstm_batch_size: 10  # number of data participating in actual training : batch_size * 11
+  lstm_batch_size: 6  # number of data participating in actual training : batch_size * 11
   lstm_valid_interval: 1000
   lstm_chkpt_interval: 5000
 
 model:
   embed_dims: 512
 
-  # for LSTM classifier
+  # for LSTM classifier.py
   lstm_neuron_num: 256
 
 

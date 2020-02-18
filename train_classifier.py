@@ -1,7 +1,7 @@
 import argparse
 from utils.data_loader import *
 from utils.hparams import HParam
-from models.lstm_classifier import classifier
+from models.classifier import *
 import tensorflow as tf
 
 if __name__ == "__main__":
@@ -22,16 +22,19 @@ if __name__ == "__main__":
     train_dataset = Dataset(mode='training', hp=hp, r=args.train_data_ratio)
     valid_dataset = Dataset(mode='validation', hp=hp)
 
-    # Build LSTM end-to-end classifier
-    model = classifier(hp)
+    # Build LSTM end-to-end classifier.py
+    #model = classifier(hp)
+    model = ResNetClassifier(hp)
+    #model = CNNClassifier(hp)
 
     for epoch in range(hp.train.lstm_train_epoch_num):
         batch_x, batch_y = train_dataset.get_batch(hp.train.lstm_batch_size)
-        train_loss = model.train_on_batch(batch_x, batch_y)
+        train_loss, train_error_rate = model.train_on_batch(batch_x, batch_y)
 
         # Write summary
         with writer.as_default():
             tf.summary.scalar('train_loss', train_loss, step=epoch)
+            tf.summary.scalar('train_error_rate', train_error_rate, step=epoch)
 
         # Validate model
         if epoch % hp.train.lstm_valid_interval == 0:
@@ -48,11 +51,6 @@ if __name__ == "__main__":
                 loss_list.append(valid_loss)
                 error_rate_list.append(valid_error_rate)
 
-            err = ""
-            for error_rate in error_rate_list:
-                err += str(error_rate) + " "
-            print("Epoch : {}, Valid error rate : {}".format(epoch, err))
-
             with writer.as_default():
                 tf.summary.scalar('valid_loss', tf.reduce_mean(loss_list), step=epoch)
                 tf.summary.scalar('valid_error_rate', tf.reduce_mean(error_rate_list), step=epoch)
@@ -62,8 +60,7 @@ if __name__ == "__main__":
             path = os.path.join(args.chkpt_dir, "chkpt-" + str(epoch))
             model.save_weights(path)
 
-        if epoch % 1000 == 0:
-            print("Epoch : {}, Train Loss : {}".format(epoch, '%1.4f' % train_loss))
+        print("Epoch : {}, Train Loss : {}, Train Err : {}".format(epoch, '%1.4f' % train_loss, '%1.4f' % train_error_rate))
 
     path = os.path.join(args.chkpt_dir, "chkpt-" + str(hp.train.lstm_train_epoch_num))
     model.save_weights(path)

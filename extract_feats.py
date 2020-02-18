@@ -33,16 +33,18 @@ if __name__ == "__main__":
                 f_in_name = os.path.join(indir, filename)
 
                 wav = audio.load_wav(f_in_name)
+                wav = audio.rescale(wav)
                 mel = audio.melspectrogram(wav).T
 
                 # To make fixed size inputs for models
                 while mel.shape[0] > hp.audio.time_length:
                     mel = np.delete(mel, 1, 0)
                 while mel.shape[0] < hp.audio.time_length:
-                    padding = np.zeros(hp.audio.n_mels)
+                    padding = np.zeros(80)
                     mel = np.vstack([mel, padding])
 
                 mel_vectors.append(mel)
 
             mel_vectors = np.array(mel_vectors)
+            print(mel_vectors.shape)
             np.save(f_out_name, mel_vectors)
