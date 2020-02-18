@@ -22,13 +22,13 @@ if __name__ == "__main__":
     train_dataset = Dataset(mode='training', hp=hp, r=args.train_data_ratio)
     valid_dataset = Dataset(mode='validation', hp=hp)
 
-    # Build LSTM end-to-end classifier.py
+    # Build end-to-end classifier.py
     #model = classifier(hp)
     model = ResNetClassifier(hp)
     #model = CNNClassifier(hp)
 
-    for epoch in range(hp.train.lstm_train_epoch_num):
-        batch_x, batch_y = train_dataset.get_batch(hp.train.lstm_batch_size)
+    for epoch in range(hp.train.classifier_train_epoch_num):
+        batch_x, batch_y = train_dataset.get_batch(hp.train.classifier_batch_size)
         train_loss, train_error_rate = model.train_on_batch(batch_x, batch_y)
 
         # Write summary
@@ -37,7 +37,7 @@ if __name__ == "__main__":
             tf.summary.scalar('train_error_rate', train_error_rate, step=epoch)
 
         # Validate model
-        if epoch % hp.train.lstm_valid_interval == 0:
+        if epoch % hp.train.classifier_valid_interval == 0:
             loss_list = []
             error_rate_list = []
             for key, x in valid_dataset.x.items():
@@ -56,11 +56,13 @@ if __name__ == "__main__":
                 tf.summary.scalar('valid_error_rate', tf.reduce_mean(error_rate_list), step=epoch)
 
         # Save check point
-        if epoch != 0 and epoch % hp.train.lstm_chkpt_interval == 0:
+        if epoch != 0 and epoch % hp.train.classifier_chkpt_interval == 0:
             path = os.path.join(args.chkpt_dir, "chkpt-" + str(epoch))
             model.save_weights(path)
 
         print("Epoch : {}, Train Loss : {}, Train Err : {}".format(epoch, '%1.4f' % train_loss, '%1.4f' % train_error_rate))
 
-    path = os.path.join(args.chkpt_dir, "chkpt-" + str(hp.train.lstm_train_epoch_num))
+    path = os.path.join(args.chkpt_dir, "chkpt-" + str(hp.train.classifier_train_epoch_num))
     model.save_weights(path)
+
+    print("Optimization is Done!")
