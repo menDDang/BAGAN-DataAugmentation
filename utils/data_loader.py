@@ -1,7 +1,7 @@
 import os
 import numpy as np
 
-commands = {"backward":0, "down":1, "go":2, "off":3, "on":4, "right":5, "stop":6, "up":7, "yes":8, "no":9}
+commands = {"left":0, "down":1, "go":2, "off":3, "on":4, "right":5, "stop":6, "up":7, "yes":8, "no":9}
 labels = ['backward', 'dog', 'follow', 'happy', 'marvin', 'on', 'sheila', 'tree', 'wow', 'bed', \
           'down', 'forward', 'house', 'nine', 'one', 'six', 'two', 'yes', 'bird', 'eight', \
           'four', 'learn', 'no', 'right', 'stop', 'up', 'zero', 'cat', 'five', 'go', \
@@ -28,7 +28,8 @@ def get_data_in_noncommand(mode, hp):
             continue
 
         filename = os.path.join(hp.path.feat_dir, mode, label + ".npy")
-        x.append(np.load(filename))
+        _x = np.load(filename)
+        x.append(_x)
 
     x = np.vstack(x)
     return x

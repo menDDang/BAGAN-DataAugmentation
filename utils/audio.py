@@ -13,6 +13,9 @@ class Audio:
     def load_wav(self, filename):
         return librosa.core.load(filename, sr=self.hp.audio.sampling_rate)[0]
 
+    def rescale(self, wav):
+        return wav / np.abs(wav).max() * self.hp.audio.rescaling_max
+
     def stft(self, wav):
         return librosa.stft(y=wav,
                             n_fft=self.hp.audio.n_fft,
