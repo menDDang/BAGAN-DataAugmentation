@@ -23,10 +23,22 @@ if __name__ == "__main__":
     valid_dataset = Dataset(mode='validation', hp=hp)
 
     # Build end-to-end classifier.py
-    model = ResNetClassifier(hp)
+    model = ResNetClassifier()
 
-    for epoch in range(hp.train.classifier_train_epoch_num):
-        batch_x, batch_y = train_dataset.get_batch(hp.train.classifier_batch_size)
+    # Set optimizer & loss function
+    lr_scheduler = tf.keras.optimizers.schedules.ExponentialDecay(
+        initial_learning_rate=hp.classifier.initial_learning_rate,
+        decay_steps=hp.classifier.train_epoch_num,
+        decay_rate=hp.classifier.lr_decay_rate
+    )
+    optimizer = tf.keras.optimizers.Adam(learning_rate=lr_scheduler)
+    loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=False)
+
+    # Compile model
+    model.compile(optimizer=optimizer, loss_fn=loss_fn)
+
+    for epoch in range(hp.classifier.train_epoch_num):
+        batch_x, batch_y = train_dataset.get_batch(hp.classifier.batch_size)
         train_loss = model.train_on_batch(batch_x, batch_y)
 
         # Write summary
@@ -34,14 +46,14 @@ if __name__ == "__main__":
             tf.summary.scalar('train_loss', train_loss, step=epoch)
 
         # Validate model
-        if epoch % hp.train.classifier_valid_interval == 0:
+        if epoch % hp.classifier.valid_interval == 0:
             valid_loss, valid_mean_eer = model.evaluate(dataset=valid_dataset)
             with writer.as_default():
                 tf.summary.scalar('valid_loss', valid_loss, step=epoch)
                 tf.summary.scalar('valid_mean_eer', valid_mean_eer, step=epoch)
 
         # Save check point
-        if epoch != 0 and epoch % hp.train.classifier_chkpt_interval == 0:
+        if epoch != 0 and epoch % hp.classifier.chkpt_interval == 0:
             path = os.path.join(args.chkpt_dir, "chkpt-" + str(epoch))
             model.save_weights(path)
 
@@ -50,11 +62,11 @@ if __name__ == "__main__":
     # Validate last
     valid_loss, valid_mean_eer = model.evaluate(dataset=valid_dataset)
     with writer.as_default():
-        tf.summary.scalar('valid_loss', valid_loss, step=hp.train.classifier_train_epoch_num)
-        tf.summary.scalar('valid_mean_eer', valid_mean_eer, step=hp.train.classifier_train_epoch_num)
+        tf.summary.scalar('valid_loss', valid_loss, step=hp.classifier.train_epoch_num)
+        tf.summary.scalar('valid_mean_eer', valid_mean_eer, step=hp.classifier.train_epoch_num)
 
     # Save last
-    path = os.path.join(args.chkpt_dir, "chkpt-" + str(hp.train.classifier_train_epoch_num))
+    path = os.path.join(args.chkpt_dir, "chkpt-" + str(hp.classifier.train_epoch_num))
     model.save_weights(path)
 
     print("Optimization is Done!")
