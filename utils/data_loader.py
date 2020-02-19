@@ -72,3 +72,32 @@ class Dataset:
         y = np.vstack(y)
 
         return x, y
+
+
+class BAGANDataset:
+    def __init__(self, mode, hp, r=1):
+        if not mode in ['training', 'testing', 'validation']:
+            raise ValueError("mode must be in 'training', 'testing', 'validation'")
+
+        self.hp = hp
+        self.mode = mode
+        self.commands = commands
+
+        self.x = dict()
+        for command in commands:
+            _x = get_data_in_command(mode, command, hp)
+            idx = int(len(_x) * r)
+            self.x[command] = _x[:idx]
+
+    def get_batch(self, batch_size):
+        x = []
+        for i in range(batch_size):
+            for key, data in self.x.items():
+                idx = np.random.randint(0, len(data))
+                _x = data[idx]
+
+                x.append(_x)
+
+        x = np.stack(x, axis=0)
+
+        return x
