@@ -70,7 +70,6 @@ class ResNetClassifier(tf.keras.Model):
             tf.keras.layers.Dense(11, activation='softmax')
         ])
 
-
     def call(self, x):
         x = tf.expand_dims(x, -1)
         x = self.conv1(x)
@@ -87,7 +86,6 @@ class ResNetClassifier(tf.keras.Model):
         with tf.GradientTape() as tape:
             y_pred = self.call(batch_x)
             train_loss = self.loss_fn(y_true=batch_y, y_pred=y_pred)
-            train_error_rate = 1 - tf.reduce_mean(tf.cast(tf.equal(tf.argmax(batch_y, axis=1), tf.argmax(y_pred, axis=1)), tf.float32))
 
             variable_list = self.conv1.trainable_variables
             variable_list += self.res1.trainable_variables
@@ -101,72 +99,9 @@ class ResNetClassifier(tf.keras.Model):
             grad = tape.gradient(train_loss, variable_list)
             self.optimizer.apply_gradients(zip(grad, variable_list))
 
-        return train_loss, train_error_rate
-
-    def evaluate(self, x, y_true):
-        loss_list, error_rate_list, i = [], [], 0
-        while (i + 100 < len(x)):
-            y_pred = self.call(x[i:i+100])
-            loss = self.loss_fn(y_true=y_true[i:i+100], y_pred=y_pred)
-            loss_list.append(loss)
-            error_rate = 1 - tf.reduce_mean(tf.cast(tf.equal(tf.argmax(y_pred, axis=1), tf.argmax(y_true[i:i+100], axis=1)), tf.float32))
-            error_rate_list.append(error_rate)
-            i += 100
-
-        return tf.reduce_mean(loss_list), tf.reduce_mean(error_rate_list)
-
-
-class CNNClassifier(tf.keras.Model):
-    def __init__(self, hp):
-        super(CNNClassifier, self).__init__()
-        self.hp = hp
-
-        output_num = 10 + 1 # 10 : number of wuw, 1 : unknown
-
-        lr_scheduler = tf.keras.optimizers.schedules.PolynomialDecay(
-            initial_learning_rate=hp.train.classifier_learning_rate,
-            decay_steps=hp.train.classifier_train_epoch_num,
-            end_learning_rate=0.00001
-        )
-        self.optimizer = tf.keras.optimizers.Adam(learning_rate=lr_scheduler)
-        #self.loss_fn = tf.keras.losses.CategoricalCrossentropy()
-        self.loss_fn = tf.keras.losses.BinaryCrossentropy()
-
-        self.model = tf.keras.models.Sequential([
-            tf.keras.layers.Conv2D(8, (2,2), padding='same', activation='relu'),     # [90, 80, 8]
-            tf.keras.layers.MaxPool2D(2),                                            # [45, 40, 8]
-            tf.keras.layers.Conv2D(16, (2,2), padding='same', activation='relu'),    # [45, 40, 16]
-            tf.keras.layers.Conv2D(16, (2, 2), padding='same', activation='relu'),  # [45, 40, 16]
-            tf.keras.layers.Conv2D(16, (2, 2), padding='same', activation='relu'),  # [45, 40, 16]
-            tf.keras.layers.MaxPool2D((3,2)),                                        # [15, 20, 16]
-            tf.keras.layers.Conv2D(32, (2, 2), padding='same', activation='relu'),   # [15, 20, 32]
-            tf.keras.layers.MaxPool2D((3, 2)),                                       # [5, 10, 32]
-            tf.keras.layers.Conv2D(64, (2, 2), padding='same', activation='relu'),   # [5, 10, 64]
-            tf.keras.layers.Conv2D(64, (2, 2), padding='same', activation='relu'),  # [5, 10, 64]
-            tf.keras.layers.Conv2D(128, (2, 2), padding='same', activation='relu'),  # [5, 10, 128]
-            tf.keras.layers.Conv2D(128, (2, 2), padding='same', activation='relu'),  # [5, 10, 128]
-            tf.keras.layers.Conv2D(128, (2, 2), padding='same', activation='relu'),  # [5, 10, 128]
-            tf.keras.layers.Flatten(),
-            #tf.keras.layers.Dense(512, activation='relu'),
-            #tf.keras.layers.Dense(256, activation='relu'),
-            #tf.keras.layers.Dense(128, activation='relu'),
-            tf.keras.layers.Dense(output_num, activation='softmax')
-        ])
-
-    def call(self, x):
-        x = tf.expand_dims(x, -1)
-        return self.model(x)
-
-    def train_on_batch(self, batch_x, batch_y):
-        with tf.GradientTape() as tape:
-            y_pred = self.call(batch_x)
-            train_loss = self.loss_fn(batch_y, y_pred)
-            grad = tape.gradient(train_loss, self.model.trainable_variables)
-            self.optimizer.apply_gradients(zip(grad, self.model.trainable_variables))
-
         return train_loss
 
-    def evaluate(self, x, y_true):
+    def evaluate_old(self, x, y_true):
         loss_list, error_rate_list, i = [], [], 0
         while (i + 100 < len(x)):
             y_pred = self.call(x[i:i+100])
@@ -178,95 +113,67 @@ class CNNClassifier(tf.keras.Model):
 
         return tf.reduce_mean(loss_list), tf.reduce_mean(error_rate_list)
 
+    def evaluate(self, dataset):
+        # Predict
+        y_pred = dict()
+        for key, x in dataset.x.items():
+            tmp = []
+            i = 0
+            while True:
+                if i + 100 < len(x):
+                    tmp += [np.array(self.call(x[i:i + 100]), dtype=np.float32)]
+                    i += 100
+                else:
+                    tmp += [np.array(self.call(x[i:]), dtype=np.float32)]
+                    break
 
+            tmp = np.vstack(tmp)
+            y_pred[key] = tmp
 
+        # Calculate loss
+        loss_list = []
+        for key in y_pred:
+            y_true = np.zeros(shape=[len(y_pred[key]), 11])
+            if key == 'unknown':
+                y_true[:, -1] = 1
+            else:
+                y_true[:, dataset.commands[key]] = 1
 
-class classifier(tf.keras.Model):
-    def __init__(self, hp):
-        super(classifier, self).__init__()
-        self.hp = hp
+            loss_list.append(self.loss_fn(y_true, y_pred[key]))
+        loss = np.mean(loss_list)
 
-        lstm_neuron_num = hp.model.lstm_neuron_num
-        time_length = hp.audio.time_length
-        num_mels = hp.audio.n_mels
-        output_num = 10 + 1 # 10 : number of wuw, 1 : unknown
+        # Calculate mean EER
+        mean_eer = []
+        for key, x in dataset.x.items():
+            if key == 'unknown':
+                continue
 
-        """
-        lr_scheduler = tf.keras.optimizers.schedules.PolynomialDecay(
-            initial_learning_rate=hp.train.lstm_learning_rate,
-            decay_steps=hp.train.lstm_train_epoch_num,
-            end_learning_rate=0.00001
-        )
-        self.optimizer = tf.keras.optimizers.Adam(learning_rate=lr_scheduler)
-        """
-        self.optimizer = tf.keras.optimizers.Adam(hp.train.lstm_learning_rate)
-        #self.loss_fn = tf.keras.losses.CategoricalCrossentropy()
-        self.loss_fn = tf.keras.losses.BinaryCrossentropy()
+            y_true = dataset.commands[key]
+            eer, diff = 1, 1
+            for threshold in [i * 0.01 for i in range(100)]:
+                correct_num, error_num = 0, 0
+                for j in range(len(y_pred[key])):
+                    if y_pred[key][j, y_true] > threshold:
+                        correct_num += 1
+                    else:
+                        error_num += 1
+                FAR = float(error_num) / len(y_pred[key])
 
-        self.model = tf.keras.models.Sequential()
-        self.model.add(tf.keras.layers.Conv2D(45, (3, 3), padding='same', activation='relu'))
-        for i in range(6):
-            self.model.add(Resnet(45))
-        self.model.add(tf.keras.layers.Conv2D(45, (3, 3), padding='same', activation='relu'))
-        self.model.add(tf.keras.layers.Conv2D(45, (3, 3), padding='same', activation='relu'))
-        self.model.add(tf.keras.layers.AveragePooling2D((3, 3)))
-        self.model.add(tf.keras.layers.Flatten())
-        self.model.add(tf.keras.layers.Dense(output_num, activation='softmax'))
+                correct_num, error_num = 0, 0
+                for j in range(len(y_pred['unknown'])):
+                    if y_pred['unknown'][j, y_true] > threshold:
+                        error_num += 1
+                    else:
+                        correct_num += 1
+                FFR = float(error_num) / len(y_pred['unknown'])
 
-        """    
-        self.model.add()
-        self.model = tf.keras.models.Sequential([
-            tf.keras.layers.Conv2D(8, (2,2), padding='same', activation='relu'),     # [90, 80, 8]
-            tf.keras.layers.MaxPool2D(2),                                            # [45, 40, 8]
-            tf.keras.layers.Conv2D(16, (2,2), padding='same', activation='relu'),    # [45, 40, 16]
-            tf.keras.layers.MaxPool2D((3,2)),                                        # [15, 20, 16]
-            tf.keras.layers.Conv2D(32, (2, 2), padding='same', activation='relu'),   # [15, 20, 32]
-            tf.keras.layers.MaxPool2D((3, 2)),                                       # [5, 10, 32]
-            tf.keras.layers.Conv2D(64, (2, 2), padding='same', activation='relu'),   # [5, 10, 64]
-            tf.keras.layers.Conv2D(128, (2, 2), padding='same', activation='relu'),  # [5, 10, 128]
-            tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(512, activation='relu'),
-            tf.keras.layers.Dense(256, activation='relu'),
-            tf.keras.layers.Dense(128, activation='relu'),
-            tf.keras.layers.Dense(output_num, activation='softmax')
-        ])
-        """
-        """
-        self.model = tf.keras.models.Sequential([
-            tf.keras.layers.LSTM(lstm_neuron_num, input_shape=[time_length, num_mels], return_sequences=True),
-            tf.keras.layers.LSTM(lstm_neuron_num, return_sequences=True),
-            tf.keras.layers.LSTM(lstm_neuron_num),
-            tf.keras.layers.Dense(512, activation='relu'),
-            tf.keras.layers.Dense(256, activation='relu'),
-            tf.keras.layers.Dense(128, activation='relu'),
-            tf.keras.layers.Dense(output_num, activation='softmax')
-        ])
-        """
+                if diff > abs(FAR - FFR):
+                    diff = abs(FAR - FFR)
+                    eer = (FAR + FFR) / 2
 
+            # print(key, eer)
+            mean_eer.append(eer)
+        mean_eer = np.mean(mean_eer)
 
-
-    def call(self, x):
-        x = tf.expand_dims(x, -1)
-        return self.model(x)
-
-    def train_on_batch(self, batch_x, batch_y):
-        with tf.GradientTape() as tape:
-            y_pred = self.call(batch_x)
-            train_loss = self.loss_fn(batch_y, y_pred)
-            grad = tape.gradient(train_loss, self.model.trainable_variables)
-            self.optimizer.apply_gradients(zip(grad, self.model.trainable_variables))
-
-        return train_loss
-
-    def evaluate(self, x, y_true):
-        loss_list, error_rate_list, i = [], [], 0
-        while (i + 100 < len(x)):
-            y_pred = self.call(x[i:i+100])
-            loss = self.loss_fn(y_true=y_true[i:i+100], y_pred=y_pred)
-            loss_list.append(loss)
-            error_rate = 1 - tf.reduce_mean(tf.cast(tf.equal(tf.argmax(y_pred, axis=1), tf.argmax(y_true[i:i+100], axis=1)), tf.float32))
-            error_rate_list.append(error_rate)
-            i += 100
-
-        return tf.reduce_mean(loss_list), tf.reduce_mean(error_rate_list)
+        return loss, mean_eer
 
