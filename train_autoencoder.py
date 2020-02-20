@@ -2,14 +2,14 @@ import tensorflow as tf
 from models.auto_encoder import AutoEncoder
 import argparse
 from utils.hparams import HParam
-from utils.data_loader import BAGANDataset
+from utils.data_loader import AutoencoderDataset
 import os
 import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', default='config/default.yaml', help='confuguration file')
-    parser.add_argument('--train_data_ratio', default=1, type=float, help='ratio of data to use for training, 0<r<=1')
+    parser.add_argument('--train_data_ratio', default=0.2, type=float, help='ratio of data to use for training, 0<r<=1')
     parser.add_argument('--log_dir', required=True, type=str, help='directory to store summaries')
     parser.add_argument('--chkpt_dir', default='chkpt/autoencoder', type=str)
 
@@ -22,8 +22,8 @@ if __name__ == "__main__":
     writer = tf.summary.create_file_writer(logdir)
 
     # Create data sets
-    train_dataset = BAGANDataset(mode='training', hp=hp, r=args.train_data_ratio)
-    valid_dataset = BAGANDataset(mode='validation', hp=hp)
+    train_dataset = AutoencoderDataset(mode='training', hp=hp, r=args.train_data_ratio)
+    valid_dataset = AutoencoderDataset(mode='validation', hp=hp)
 
     # Build model
     model = AutoEncoder(hp)

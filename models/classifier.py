@@ -1,21 +1,10 @@
 import numpy as np
 import tensorflow as tf
-from models.modules import Resnet
 
 
 class ResNetClassifier(tf.keras.Model):
-    def __init__(self, hp):
+    def __init__(self):
         super(ResNetClassifier, self).__init__()
-        self.hp = hp
-
-        # Set optimizer & loss function
-        lr_scheduler = tf.keras.optimizers.schedules.ExponentialDecay(
-            initial_learning_rate=hp.train.classifier_initial_learning_rate,
-            decay_steps=hp.train.classifier_train_epoch_num,
-            decay_rate=hp.train.classifier_lr_decay_rate
-        )
-        self.optimizer = tf.keras.optimizers.Adam(learning_rate=lr_scheduler)
-        self.loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=False)
 
         # Build model
         self.conv1 = tf.keras.layers.Conv2D(filters=45, kernel_size=(3, 3), padding='same', activation='relu')
@@ -69,6 +58,14 @@ class ResNetClassifier(tf.keras.Model):
             tf.keras.layers.Dense(128, activation='relu'),
             tf.keras.layers.Dense(11, activation='softmax')
         ])
+
+        #
+        self.optimizer = None
+        self.loss_fn = None
+
+    def compile(self, optimizer, loss_fn):
+        self.optimizer = optimizer
+        self.loss_fn = loss_fn
 
     def call(self, x):
         x = tf.expand_dims(x, -1)

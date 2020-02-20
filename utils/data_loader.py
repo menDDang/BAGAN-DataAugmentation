@@ -74,7 +74,7 @@ class Dataset:
         return x, y
 
 
-class BAGANDataset:
+class AutoencoderDataset:
     def __init__(self, mode, hp, r=1):
         if not mode in ['training', 'testing', 'validation']:
             raise ValueError("mode must be in 'training', 'testing', 'validation'")
@@ -101,3 +101,35 @@ class BAGANDataset:
         x = np.stack(x, axis=0)
 
         return x
+
+
+class BAGANDataset:
+    def __init__(self, mode, hp, r=1):
+        if not mode in ['training', 'testing', 'validation']:
+            raise ValueError("mode must be in 'training', 'testing', 'validation'")
+
+        self.hp = hp
+        self.mode = mode
+        self.commands = commands
+
+        self.x = dict()
+        for command in commands:
+            _x = get_data_in_command(mode, command, hp)
+            idx = int(len(_x) * r)
+            self.x[command] = _x[:idx]
+
+    def get_batch(self, batch_size):
+        x, y = [], []
+        for i in range(batch_size):
+            for key, data in self.x.items():
+                idx = np.random.randint(0, len(data))
+                _x = data[idx]
+                _y = np.zeros(shape=[11], dtype=np.float32)
+                _y[commands[key]] = 1
+
+                x.append(_x)
+                y.append(_y)
+
+        x = np.stack(x, axis=0)
+        y = np.stack(y, axis=0)
+        return x, y
