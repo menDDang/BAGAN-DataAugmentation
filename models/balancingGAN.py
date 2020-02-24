@@ -12,10 +12,13 @@ class BAGAN(tf.keras.Model):
         self.key_word_num = 10  # number of keyword
         self.output_num = self.key_word_num + 1  # one for fake label
 
+        self.commands = {"left":0, "down":1, "go":2, "off":3, "on":4, "right":5, "stop":6, "up":7, "yes":8, "no":9}
+
         # Set generator
         self.G = self.create_generator()
 
         # Set discriminator
+        self.encoder = create_encoder(embed_dims=self.embed_dims)
         self.D = self.create_discriminator()
 
         # Set empty dictionary for embeddings
@@ -28,16 +31,19 @@ class BAGAN(tf.keras.Model):
         if len(sample.shape) == 3:
             sample = tf.expand_dims(sample, -1)
 
-        return self.D(sample)
+        embed = self.encoder(sample)
+        return self.D(embed)
 
     def create_generator(self):
         decoder = create_decoder(time_length=self.hp.audio.time_length, feat_dim=self.hp.audio.n_mels)
         return decoder
 
     def create_discriminator(self):
-        encoder = create_encoder(embed_dims=self.embed_dims)
-        encoder.add(tf.keras.layers.Dense(self.output_num, activation='softmax'))
-        return encoder
+        discriminator = tf.keras.Sequential([
+            tf.keras.layers.Flatten(),
+            tf.keras.layers.Dense(self.output_num, activation='softmax')
+        ])
+        return discriminator
 
     def load_embeddings(self, key, embedding_path):
         mean_vector_path = os.path.join(embedding_path, key + '-mean.npy')
@@ -48,21 +54,26 @@ class BAGAN(tf.keras.Model):
 
     def generate_noise(self, size):
         noise = []
+        label = []
         for key in self.embeddings:
             mean = self.embeddings[key]['mean']
             cov = self.embeddings[key]['cov']
             #print(np.random.multivariate_normal(mean=mean, cov=cov).shape)
             noise += [np.random.multivariate_normal(mean=mean, cov=cov) for i in range(int(size))]
-
+            _y = np.zeros(shape=[self.output_num], dtype=np.float32)
+            _y[self.commands[key]] = 1
+            for i in range(int(size)):
+                label += [_y]
         noise = np.stack(noise, 0)
-        return noise
+        label = np.stack(label, 0)
+        return noise, label
 
     def train_on_batch(self, x_real, y):
         # Generate noise
         size = int(len(x_real) / self.key_word_num)
-        noise = self.generate_noise(size)
+        noise, y_gen = self.generate_noise(size)
 
-        '''
+
         # Generate fake samples
         x_fake = self.generate(noise)
 
@@ -80,16 +91,15 @@ class BAGAN(tf.keras.Model):
             D_loss = (D_loss_fake + D_loss_real) / 2
             grads = tape.gradient(D_loss, self.D.trainable_variables)
             self.D_optimizer.apply_gradients(zip(grads, self.D.trainable_variables))
-        '''
-        D_loss = 1
+
         # Train generator
         G_loss_list = []
-        for i in range(10):
+        for i in range(1):
             with tf.GradientTape() as tape:
-                #noise = self.generate_noise(size)
+                #noise, y_gen = self.generate_noise(size)
                 x_fake = self.generate(noise)
                 y_pred = self.discriminate(x_fake)
-                G_loss = self.loss_fn(y_pred=y_pred, y_true=y)
+                G_loss = self.loss_fn(y_pred=y_pred, y_true=y_gen)
 
                 # Calculate gradients & update discriminator
                 grads = tape.gradient(G_loss, self.G.trainable_variables)
@@ -102,7 +112,7 @@ class BAGAN(tf.keras.Model):
     def evaluate(self, x_real, y):
         # Generate noise
         size = len(x_real) / self.key_word_num
-        noise = self.generate_noise(size)
+        noise, y_gen = self.generate_noise(size)
 
         # Generate fake samples
         x_fake = self.generate(noise)
@@ -123,7 +133,7 @@ class BAGAN(tf.keras.Model):
         D_acc = (D_acc_fake + D_acc_real) / 2
 
         # Calculate G_loss
-        G_loss = self.loss_fn(y_pred=D_fake, y_true=y)
+        G_loss = self.loss_fn(y_pred=D_fake, y_true=y_gen)
 
         # Calculate G_acc
         G_acc = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(D_fake, axis=1), tf.argmax(y, axis=1)), tf.float32))

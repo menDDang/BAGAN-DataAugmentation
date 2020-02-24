@@ -16,7 +16,6 @@ if __name__ == "__main__":
 
     # Create data sets
     train_dataset = AutoencoderDataset(mode='training', hp=hp, r=args.train_data_ratio)
-    valid_dataset = AutoencoderDataset(mode='validation', hp=hp)
 
     # Build encoder
     encoder = create_encoder(hp.autoencoder.embed_dims)
@@ -49,26 +48,3 @@ if __name__ == "__main__":
         save_path = os.path.join(hp.path.embed_dir, 'training', key + '-variance')
         np.save(save_path, var)
 
-    # Generate embeddings for valid set
-    os.makedirs(hp.path.embed_dir + '/validation', exist_ok=True)
-    for key, x in valid_dataset.x.items():
-        embeddings = []
-
-        i = 0
-        while True:
-            if i + 100 < len(x):
-                inputs = np.expand_dims(x[i:i + 100], -1)
-                embeddings += [np.array(encoder(inputs), dtype=np.float32)]
-                i += 100
-            else:
-                inputs = np.expand_dims(x[i:], -1)
-                embeddings += [np.array(encoder(inputs), dtype=np.float32)]
-                break
-
-        embeddings = np.vstack(embeddings)
-        mean = np.mean(embeddings, axis=0)
-
-        save_path = os.path.join(hp.path.embed_dir, 'validation', key + '-mean')
-        np.save(save_path, mean)
-        save_path = os.path.join(hp.path.embed_dir, 'validation', key + '-variance')
-        np.save(save_path, var)

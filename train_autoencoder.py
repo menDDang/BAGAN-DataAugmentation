@@ -29,9 +29,7 @@ if __name__ == "__main__":
     model = AutoEncoder(hp)
 
     # Set loss function & optimizer
-    #loss_fn = tf.keras.losses.MeanSquaredError()
-    #loss_fn = tf.keras.losses.CategoricalCrossentropy()
-    loss_fn = tf.keras.losses.BinaryCrossentropy()
+    loss_fn = tf.keras.losses.MeanSquaredError()
     lr_scheduler = tf.keras.optimizers.schedules.ExponentialDecay(
         initial_learning_rate=hp.autoencoder.initial_learning_rate,
         decay_steps=hp.autoencoder.train_epoch_num,
