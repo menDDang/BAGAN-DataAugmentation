@@ -13,6 +13,7 @@ if __name__ == "__main__":
     parser.add_argument('--log_dir', required=True, type=str, help='directory to store summaries')
     parser.add_argument('--chkpt_dir', default='chkpt/bagan', type=str)
     parser.add_argument('--embedding_path', required=True, type=str)
+    parser.add_argument('--pretrained_model_path', required=True, type=str)
 
     args = parser.parse_args()
     hp = HParam(args.config)
@@ -29,8 +30,8 @@ if __name__ == "__main__":
     model = BAGAN(hp)
 
     # Load pre-trained encoder & decoder
-    encoder_path = 'chkpt/autoencoder/r=0.2-v1/enc/chkpt-10000'
-    decoder_path = 'chkpt/autoencoder/r=0.2-v1/dec/chkpt-10000'
+    encoder_path = os.path.join(args.pretrained_model_path, 'enc', 'chkpt-10000')
+    decoder_path = os.path.join(args.pretrained_model_path, 'dec', 'chkpt-10000')
     model.D.load_weights(encoder_path).expect_partial()
     model.G.load_weights(decoder_path).expect_partial()
 
@@ -65,7 +66,7 @@ if __name__ == "__main__":
         x, y = train_dataset.get_batch(hp.bagan.batch_size)
         D_loss, G_loss = model.train_on_batch(x, y)
         
-        if epoch % 10 == 0:
+        if epoch % 1 == 0:
             with writer.as_default():
                 tf.summary.scalar('Train D Loss', D_loss, step=epoch)
                 tf.summary.scalar('Train G Loss', G_loss, step=epoch)

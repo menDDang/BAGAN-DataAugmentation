@@ -29,8 +29,9 @@ if __name__ == "__main__":
     model = AutoEncoder(hp)
 
     # Set loss function & optimizer
-    loss_fn = tf.keras.losses.MeanSquaredError()
+    #loss_fn = tf.keras.losses.MeanSquaredError()
     #loss_fn = tf.keras.losses.CategoricalCrossentropy()
+    loss_fn = tf.keras.losses.BinaryCrossentropy()
     lr_scheduler = tf.keras.optimizers.schedules.ExponentialDecay(
         initial_learning_rate=hp.autoencoder.initial_learning_rate,
         decay_steps=hp.autoencoder.train_epoch_num,
@@ -57,7 +58,7 @@ if __name__ == "__main__":
             decoder_path = os.path.join(args.chkpt_dir, "dec", "chkpt-" + str(epoch))
             model.save(encoder_path, decoder_path)
 
-        if epoch % 10 == 0:
+        if epoch % 100 == 0:
             with writer.as_default():
                 tf.summary.scalar('train_loss', train_loss, step=epoch)
             print("Epoch : {}, Train Loss : {}".format(epoch, '%1.4f' % train_loss))

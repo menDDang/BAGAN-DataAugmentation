@@ -4,10 +4,10 @@ path:
   embed_dir: embeddings
 
 autoencoder:
-  initial_learning_rate: 0.001  # MSE
-  end_learning_rate: 0.00001    # MSE
-  #initial_learning_rate: 0.00001  # CCE
-  #end_learning_rate: 0.0000001    # CCE
+  #initial_learning_rate: 0.001  # MSE
+  #end_learning_rate: 0.00001    # MSE
+  initial_learning_rate: 0.001  # CCE
+  end_learning_rate: 0.0001    # CCE
   lr_decay_rate: 0.96
   train_epoch_num: 10000
   embed_dims: 256
@@ -16,11 +16,11 @@ autoencoder:
   batch_size: 6  # number of data participating in actual training : batch_size * (number of keyword)
 
 bagan:
-  initial_D_learning_rate: 0.00001
-  end_D_learning_rate: 0.00001
-  initial_G_learning_rate: 0.0001
-  end_G_learning_rate: 0.00002
-  lr_decay_rate: 0.96
+  initial_D_learning_rate: 0
+  initial_G_learning_rate: 0.00001
+  #end_D_learning_rate: 0.00001
+  #end_G_learning_rate: 0.00002
+  #lr_decay_rate: 0.96
   train_epoch_num: 10000
   embed_dims: 256
   valid_interval: 1000

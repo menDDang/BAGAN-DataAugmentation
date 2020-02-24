@@ -4,13 +4,13 @@ from tensorflow.keras.models import Sequential
 
 def create_encoder(embed_dims):
     encoder = Sequential([
-        Conv2D(16, (2, 2), activation='relu', padding='same'),
+        Conv2D(16, (2, 2), activation='relu', padding='same', dilation_rate=(1, 1)),
         MaxPooling2D((3, 2), padding='same'),
-        Conv2D(32, (2, 2), activation='relu', padding='same'),
+        Conv2D(32, (2, 2), activation='relu', padding='same', dilation_rate=(2, 2)),
         MaxPooling2D((3, 2), padding='same'),
-        Conv2D(64, (2, 2), activation='relu', padding='same'),
-        Conv2D(128, (2, 2), activation='relu', padding='same'),
-        Conv2D(128, (2, 2), activation='relu', padding='same'),
+        Conv2D(64, (2, 2), activation='relu', padding='same', dilation_rate=(4, 4)),
+        Conv2D(128, (2, 2), activation='relu', padding='same', dilation_rate=(8, 8)),
+        Conv2D(128, (2, 2), activation='relu', padding='same', dilation_rate=(16, 16)),
         Flatten(),
         Dense(embed_dims)
     ])
@@ -20,15 +20,16 @@ def create_encoder(embed_dims):
 
 def create_decoder(time_length, feat_dim):
     decoder = Sequential([
-        Dense((5 * 10 * 128)),
+        Dense((5 * 10 * 128), activation='relu'),
         Reshape((5, 10, 128)),
-        Conv2D(128, (2, 2), activation='relu', padding='same'),
+        Conv2D(128, (2, 2), activation='relu', padding='same', dilation_rate=(16, 16)),
         UpSampling2D((2, 2)),
-        Conv2D(64, (2, 2), activation='relu', padding='same'),
+        Conv2D(64, (2, 2), activation='relu', padding='same', dilation_rate=(8, 8)),
         UpSampling2D((3, 2)),
-        Conv2D(32, (2, 2), activation='relu', padding='same'),
+        Conv2D(32, (2, 2), activation='relu', padding='same', dilation_rate=(4, 4)),
+        Conv2D(16, (2, 2), activation='relu', padding='same', dilation_rate=(2, 2)),
         UpSampling2D((3, 2)),
-        Conv2D(1, (3, 3), activation='relu', padding='same'),
+        Conv2D(1, (3, 3), activation='relu', padding='same', dilation_rate=(1, 1)),
 
         # To fit shape
         Flatten(),

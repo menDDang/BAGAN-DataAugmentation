@@ -62,6 +62,7 @@ class BAGAN(tf.keras.Model):
         size = int(len(x_real) / self.key_word_num)
         noise = self.generate_noise(size)
 
+        '''
         # Generate fake samples
         x_fake = self.generate(noise)
 
@@ -79,18 +80,24 @@ class BAGAN(tf.keras.Model):
             D_loss = (D_loss_fake + D_loss_real) / 2
             grads = tape.gradient(D_loss, self.D.trainable_variables)
             self.D_optimizer.apply_gradients(zip(grads, self.D.trainable_variables))
-
+        '''
+        D_loss = 1
         # Train generator
-        with tf.GradientTape() as tape:
-            x_fake = self.generate(noise)
-            y_pred = self.discriminate(x_fake)
-            G_loss = self.loss_fn(y_pred=y_pred, y_true=y)
+        G_loss_list = []
+        for i in range(10):
+            with tf.GradientTape() as tape:
+                #noise = self.generate_noise(size)
+                x_fake = self.generate(noise)
+                y_pred = self.discriminate(x_fake)
+                G_loss = self.loss_fn(y_pred=y_pred, y_true=y)
 
-            # Calculate gradients & update discriminator
-            grads = tape.gradient(G_loss, self.G.trainable_variables)
-            self.G_optimizer.apply_gradients(zip(grads, self.G.trainable_variables))
+                # Calculate gradients & update discriminator
+                grads = tape.gradient(G_loss, self.G.trainable_variables)
+                self.G_optimizer.apply_gradients(zip(grads, self.G.trainable_variables))
 
-        return D_loss, G_loss
+                G_loss_list.append(G_loss)
+
+        return D_loss, tf.reduce_mean(G_loss_list)
 
     def evaluate(self, x_real, y):
         # Generate noise
